@@ -1,0 +1,7 @@
+div.required label.control-label:after {
+    content: " *";
+    color: red;
+}
+div#begin-test-form{
+    display: none;
+}
