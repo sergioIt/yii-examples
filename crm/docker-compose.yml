@@ -1,0 +1,83 @@
+version: '2'
+services:
+  selenium-hub:
+    image: selenium/hub
+    ports:
+      - "4444:4444"
+  chrome:
+    image: selenium/node-chrome
+    depends_on:
+      - selenium-hub
+    links:
+      - selenium-hub:hub
+    volumes:
+      - /dev/shm:/dev/shm
+    environment:
+      no_proxy: localhost
+      HUB_PORT_4444_TCP_ADDR: selenium-hub
+      HUB_PORT_4444_TCP_PORT: 4444
+  db:
+    image: postgres:9.6
+    container_name: crm-db
+    restart: always
+    volumes:
+      - ../db1:/var/lib/postgresql/data/pgdata
+    ports:
+      - 321:5432
+    environment:
+#     - POSTGRES_DB=crm-siam
+      - POSTGRES_USER=crm
+      - POSTGRES_PASSWORD=12345
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_INITDB_ARGS="--pgdata=/var/lib/postgresql/data/pgdata"
+  db2:
+    image: postgres:9.6
+    container_name: crm-db2
+    restart: always
+    volumes:
+      - ../db2:/var/lib/postgresql/data/pgdata
+    ports:
+      - 5431:5432
+    environment:
+      - POSTGRES_USER=crm
+      - POSTGRES_PASSWORD=12345
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_INITDB_ARGS="--pgdata=/var/lib/postgresql/data/pgdata"
+
+  redis:
+        image: redis
+  pga:
+    container_name: phppgadmin
+    image: dockage/phppgadmin:latest
+    depends_on:
+      - db2
+    links:
+      - db2
+    ports:
+      - 8002:80
+    environment:
+      - PHP_PG_ADMIN_SERVER_HOST=db2
+      - PHP_PG_ADMIN_SERVER_PORT=5432
+      - PHP_PG_ADMIN_SERVER_DEFAULT_DB=binary_options
+      - PHP_PG_ADMIN_DEFAULT_LANG=russian
+  web:
+    container_name: crm-siam
+    working_dir: /app
+    image: harbor.jgit.me/library/web-php-service-test:latest
+    tty: true
+    volumes:
+      - .:/app
+    ports:
+      - 81:80
+      - 82:81
+    depends_on:
+      - db
+      - db2
+      - selenium-hub
+    links:
+      - db
+      - db2
+      - selenium-hub
+    environment:
+      - C_FORCE_ROOT=true
+      - PGPASSWORD=12345

@@ -1,0 +1,566 @@
+openapi: 3.0.1
+info:
+  title: Swagger CRM API
+  description: описание методо api, достпуных в crm
+  contact:
+    email: serge.kite@gmail.com
+  version: 1.0.0
+servers:
+- url: http://crm005.service.irontrade-sg.consul/
+tags:
+- name: asterisk
+  description: принимает запросы от системы asterisk, связанные с получением списков
+    клиентов на прозовн, либо модификации данных
+- name: user
+  description: выдаёт данные по юзерам crm
+- name: card
+  description: выдаёт данные по одной или нескольким карточками клиента (используется
+    в админке)
+- name: sytem
+  description: системные запросы (например на логирование состояний)
+- name: customer
+  description: запросы, относящиеся к килентам
+paths:
+  /asterisk-api-v3/get-users:
+    get:
+      tags:
+      - asterisk
+      summary: Список клиентов
+      description: Получение списка клиентов, загружаемых в очередь на прозвон, по
+        заднному типу клиента (очереди), валюте и владельца
+      parameters:
+      - name: token
+        in: query
+        description: секрктеный токен, используемый для авторизации
+        required: true
+        schema:
+          type: string
+      - name: type
+        in: query
+        description: тип клиента (очереди)
+        required: true
+        schema:
+          type: string
+          enum:
+          - demo_common
+          - demo_nop_common
+          - demo_ip_app_recall
+          - demo_ip_app_empty_recall
+          - real_stopped
+          - real_inactive
+          - real_demo_active
+          - demo_no_activity_1day
+          - demo_no_activity_3hours
+          - demo_no_refill
+          - demo_no_fillup
+          - demo_no_tournaments
+          - all_no_pay_tournaments
+          - demo_recent_payment_failed
+      - name: country
+        in: query
+        description: код страны клиента (определяется по валюте клиента)
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: ограничение на количество клиентов в ответе
+        required: true
+        schema:
+          type: integer
+      - name: user_id
+        in: query
+        description: id селлера - владельца карточки соответствующего клиента
+        schema:
+          type: integer
+      responses:
+        200:
+          description: успешный ответ со списком id клиентов и их номеров телефонов
+          content:
+            application/xml:
+              example: <?xml version="1.0" encoding="utf-8" ?> <asterisk_response>
+                <order id="2340877" phone="84372500277" weight="5.00072667" time_shift="0"/>
+                </asterisk_response>
+  /asterisk-api-v3/get-users-control:
+    get:
+      tags:
+      - asterisk
+      summary: Список клиентов
+      description: Получение списка клиентов, загружаемых в очередь на прозвон, по
+        заднному типу клиента (очереди), валюте и владельца. При этом, если указан
+        тип demo_common, то дополнительно происходит разметка клиентов из этого списка,
+        на тех, кому можно звонить, и тех, кому нельзя (контрольная группа). Разметка
+        просходит с помощью метода baza/api/call-center, который апедейтит поле users.callcenter_status.
+        В этом единственное отличие этого метода от get-users
+      parameters:
+      - name: token
+        in: query
+        description: секрктеный токен, используемый для авторизации
+        required: true
+        schema:
+          type: string
+      - name: type
+        in: query
+        description: тип клиента (очереди)
+        required: true
+        schema:
+          type: string
+          enum:
+          - demo_common
+          - demo_nop_common
+          - demo_ip_app_recall
+          - demo_ip_app_empty_recall
+          - real_stopped
+          - real_inactive
+          - real_demo_active
+          - demo_no_activity_1day
+          - demo_no_activity_3hours
+          - demo_no_refill
+          - demo_no_fillup
+          - demo_no_tournaments
+          - all_no_pay_tournaments
+          - demo_recent_payment_failed
+      - name: country
+        in: query
+        description: код страны клиента (определяется по валюте клиента)
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: ограничение на количество клиентов в ответе
+        required: true
+        schema:
+          type: integer
+      - name: user_id
+        in: query
+        description: id селлера - владельца карточки соответствующего клиента
+        schema:
+          type: integer
+      responses:
+        200:
+          description: успешный ответ со списком id клиентов и их номеров телефонов
+          content:
+            application/xml:
+              example: <?xml version="1.0" encoding="utf-8" ?> <asterisk_response>
+                <order id="2340877" phone="84372500277" weight="5.00072667" time_shift="0"/>
+                </asterisk_response>
+  /asterisk-api-v3/set-not-on-phone:
+    get:
+      tags:
+      - asterisk
+      summary: выставлние статуса 'недозвон' для клиента
+      description: Выставляет статус not_on_phone для карточки клиента, а также устанавливает
+        дату перезвона и апдетит поле hot_keys
+      parameters:
+      - name: token
+        in: query
+        description: секретеный токен, используемый для авторизации
+        required: true
+        schema:
+          type: string
+      - name: order_id
+        in: query
+        description: id клиента, к которому применяются изменения
+        required: true
+        schema:
+          type: integer
+      - name: recall_hours
+        in: query
+        description: на сколько часов вперёд от текущего момента устанавливать дату
+          перезвона для клиента
+        required: true
+        schema:
+          type: integer
+      responses:
+        200:
+          description: успешный ответ в виде пустого xml
+          content: {}
+
+  /api/user-info:
+    get:
+      tags:
+      - user
+      summary: Данные пользователя crm
+      description: Получает данные (логин) запрошенного пользователя crm  (используется в js line chat)
+      parameters:
+      - name: id
+        in: query
+        description: id запрашиваемого пользователя crm
+        required: true
+        schema:
+          type: integer
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              examples:
+                успешный ответ:
+                  value:
+                    id: 7
+                    login: admin
+        401:
+          description: Unauthorized
+          content: {}
+        500:
+          description: id param is empty
+          content: {}
+      security:
+      - ApiKeyAuth: []
+    options:
+      tags:
+      - user
+      summary: Данные пользователя crm
+      description: Получает данные (логин) запрошенного пользователя crm  (используется в js line chat)
+      parameters:
+      - name: id
+        in: query
+        description: id запрашиваемого пользователя crm
+        required: true
+        schema:
+          type: integer
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              examples:
+                успешный ответ:
+                  value:
+                    id: 7
+                    login: admin
+        401:
+          description: Unauthorized
+          content: {}
+        500:
+          description: id param is empty
+          content: {}
+  /api/current-user-info:
+    get:
+      tags:
+      - user
+      summary: Данные текущего пользователя crm
+      description: Получает данные (логин, роль) текущего (залогиненного в crm) пользователя  (используется в js line chat)
+        crm
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              examples:
+                успешный ответ:
+                  value:
+                    id: 7
+                    login: admin
+                    role: super-admin
+        401:
+          description: Unauthorized
+          content: {}
+        500:
+          description: Current web user is not found
+          content: {}
+      security:
+      - ApiKeyAuth: []
+    options:
+      tags:
+      - user
+      summary: Данные текущего пользователя crm
+      description: Получает данные (логин, роль) текущего (залогиненного в crm) пользователя  (используется в js line chat)
+        crm
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              examples:
+                успешный ответ:
+                  value:
+                    id: 7
+                    login: admin
+                    role: super-admin
+        401:
+          description: Unauthorized
+          content: {}
+        500:
+          description: Current web user is not found
+          content: {}
+  /api/card:
+    get:
+      tags:
+      - card
+      summary: Данные карточки crm
+      description: Данные карточки (id клиента, id владельца, логин владельца карточки  (используется в js line chat)
+        по заданному набору id клиента (в формате json)
+      parameters:
+      - name: customer_id
+        in: query
+        description: id запрашиваемых клиентов в формате json
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              examples:
+                успешный ответ:
+                  value:
+                    customer_id: 766553
+                    user_id: 38
+                    owner: seller
+
+        401:
+          description: Unauthorized
+          content: {}
+        500:
+          description: customer_id param is empty
+          content: {}
+      security:
+      - ApiKeyAuth: []
+    options:
+      tags:
+      - card
+      summary: Данные карточки crm
+      description: Данные карточки (id клиента, id владельца, логин владельца карточки  (используется в js line chat)
+        по заданному набору id клиента (в формате json)
+      parameters:
+      - name: customer_id
+        in: query
+        description: id запрашиваемых клиентов в формате json
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              examples:
+                успешный ответ:
+                  value:
+                    customer_id: 766553
+                    user_id: 38
+                    owner: seller
+        401:
+          description: Unauthorized
+          content: {}
+        500:
+          description: customer_id param is empty
+          content: {}
+  /api/all-users:
+    get:
+      tags:
+      - user
+      summary: список всех пользователей crm
+      description: список пользователей crm (id, логин, статус, роль, набор доступных валют)  (используется в js line chat)
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+                schema:
+                  $ref: '#/components/schemas/ArrayOfUsersExtended'
+                example:
+                 #todo пока не разобался как сделть пример именно массивом а не объектом, потому что возвращается на самом деле массив объектов
+                      id: 10
+                      login: alpha
+                      status: active
+                      role: support
+                      currencies: "[\"VND\",\"PHP\"]"
+        401:
+          description: Unauthorized
+          content: {}
+      security:
+      - ApiKeyAuth: []
+    options:
+      tags:
+      - api
+      summary: список всех пользователей crm
+      description: список пользователей crm (id, логин, статус, роль, набор доступных валют)  (используется в js line chat)
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+                schema:
+                  $ref: '#/components/schemas/ArrayOfUsersExtended'
+                example:
+                 #todo пока не разобался как сделть пример именно массивом а не объектом, потому что возвращается на самом деле массив объектов
+                      id: 10
+                      login: alpha
+                      status: active
+                      role: support
+                      currencies: "[\"VND\",\"PHP\"]"
+        401:
+          description: Unauthorized
+          content: {}
+  /api/client-state:
+    post:
+      tags:
+      - system
+      summary: логирование в crm клиентских состояний
+      description: логирование в crm клиентских состояний
+      requestBody:
+        description: описание состояния в массиве json с обязательным ключом status  (используется в js line chat)
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/state'
+        required: true
+      responses:
+        200:
+          description: successful operation
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        500:
+          description: missed status key at json body data
+          content: {}
+      security:
+      - ApiKeyAuth: []
+
+  /card-api/get-info:
+    get:
+      tags:
+      - card
+      summary: Данные карточки crm
+      description: Данные карточки (id карточки, логин владельца карточки). Используется админкой.
+      parameters:
+      - name: customer_id
+        in: query
+        description: id запрашиваемого клиента
+        required: true
+        schema:
+          type: integer
+      - name: token
+        in: query
+        description: секретный токен, испольщуемый в качестве авторизации
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              examples:
+                existed card:
+                  value:
+                    status: 'ok'
+                    card:
+                      id: 10
+                      owner: seller
+                not existed card:
+                  value:
+                    status: 'ok'
+                    card: null
+                error missed param token:
+                  value:
+                     status: 'error'
+                     error_message: missed get param token
+                error token mismatch:
+                   value:
+                    status: 'error'
+                    error_message: requested token mismatch
+                error missed param customer:
+                   value:
+                      status: 'error'
+                      error_message: empty get param customer_id
+
+  /card-api/get-info-multiple:
+    get:
+      tags:
+      - card
+      summary: Данные карточек crm по набору id клиентов
+      description: Данные карточек (id карточки, логин владельца карточки), соответствующие заданному набору d клиентов  Используется админкой.
+      parameters:
+      - name: customers_group
+        in: query
+        description: набор id клиентов в формате json
+        required: true
+        schema:
+          type: string
+      - name: token
+        in: query
+        description: секретный токен, испольщуемый в качестве авторизации
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              examples:
+                set of cards:
+                  value:
+                    cards:
+                      234:
+                        owner: seller
+                      32334:
+                        owner: seller3
+                empty set of cards:
+                  value:
+                    status: ok
+                    cards: []
+                error missed param token:
+                  value:
+                     status: 'error'
+                     error_message: missed get param token
+                error token mismatch:
+                   value:
+                    status: 'error'
+                    error_message: requested token mismatch
+                error missed param customer:
+                   value:
+                      status: 'error'
+                      error_message: empty get param customers_group
+
+
+components:
+  schemas:
+    state:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - ok
+          - error
+        message:
+          type: string
+    ArrayOfUsers:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+          login:
+            type: string
+          role:
+            type: string
+    ArrayOfUsersExtended:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+          login:
+            type: string
+          role:
+            type: string
+          status:
+            type: string
+          currencies:
+            type: string
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      name: X-Auth-Token
+      in: header

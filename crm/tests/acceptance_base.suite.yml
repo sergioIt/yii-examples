@@ -1,0 +1,6 @@
+actor: Acceptance_baseTester
+modules:
+    enabled:
+     - PhpBrowser:
+         url: http://localhost:85/
+     - \Helper\Acceptance_base

@@ -1,0 +1,71 @@
+actor: Tester
+paths:
+    tests: tests
+    log: tests/_output
+    data: tests/_data
+    helpers: tests/_support
+settings:
+    bootstrap: _bootstrap.php
+    memory_limit: 1024M
+    colors: true
+extensions:
+  enabled:
+    - Codeception\Extension\PhpBuiltinServer
+  config:
+      Codeception\Extension\PhpBuiltinServer:
+          hostname: localhost
+          port: 85
+          autostart: true
+          documentRoot: ./web
+          router: ./web/index-test.php
+          directoryIndex: index-test.php
+          startDelay: 1
+          phpIni: ./tests/php.ini
+modules:
+    enabled:
+      - MultiDb
+    config:
+      MultiDb:
+        connections:
+          Db:
+            dsn: 'pgsql:host=db;dbname=crm_db_test'
+            user: 'crm'
+            password: '12345'
+            dump: tests/_data/pg_dump.sql
+            populate: true
+            cleanup: false
+            primary: true
+            reconnect: true
+          Db2:
+            dsn: 'pgsql:host=db2;dbname=crm_db2_test'
+            user: 'crm'
+            password: '12345'
+            dump: tests/_data/dump2.sql
+            populate: true
+            cleanup: false
+            reconnect: true
+        Yii2:
+          cleanup: false
+
+
+# To enable code coverage:
+#coverage:
+#    #c3_url: http://localhost:8080/index-test.php/
+#    enabled: true
+#    #remote: true
+#    #remote_config: '../tests/codeception.yml'
+#    whitelist:
+#        include:
+#            - models/*
+#            - controllers/*
+#            - commands/*
+#            - mail/*
+#    blacklist:
+#        include:
+#            - assets/*
+#            - config/*
+#            - runtime/*
+#            - vendor/*
+#            - views/*
+#            - web/*
+#            - tests/*
